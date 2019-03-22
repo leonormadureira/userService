@@ -2,18 +2,18 @@ package com.rentacar.user.dto;
 
 public class CarDto {
 
-    public Long car_id;
+    public Long id;
     public String brand;
     public String model;
     public boolean is_available;
     public Long user_id;
 
-    public Long getCar_id() {
-        return car_id;
+    public Long getId() {
+        return id;
     }
 
-    public void setCar_id(Long car_id) {
-        this.car_id = car_id;
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getBrand() {
