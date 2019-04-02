@@ -5,7 +5,7 @@ public class CarDto {
     public Long id;
     public String brand;
     public String model;
-    public boolean is_available;
+    public Boolean is_available;
     public Long user_id;
 
     public Long getId() {

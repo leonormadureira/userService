@@ -3,7 +3,6 @@ package com.rentacar.user.service.serviceImplementation;
 import com.google.gson.Gson;
 import com.rentacar.user.domain.User;
 import com.rentacar.user.dto.CarDto;
-import com.rentacar.user.dto.InputBody;
 import com.rentacar.user.repository.UserRepository;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +14,6 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
 import java.util.List;
 
 @Data
@@ -34,12 +32,14 @@ public class UserServiceImplementation {
 
 
     @Autowired
-    public UserServiceImplementation(UserRepository user_repository){this.user_repository = user_repository;}
+    public UserServiceImplementation(UserRepository user_repository) {
+        this.user_repository = user_repository;
+    }
 
 
-    public List<CarDto> getCarsCurrentlyRentedByUserId(Long user_id){
+    public List<CarDto> getCarsCurrentlyRentedByUserId(Long user_id) {
 
-        String url = "http://"+host+":"+port+"/carService/searchCars?user_id="+user_id;
+        String url = "http://" + host + ":" + port + "/carService/searchCars?user_id=" + user_id;
 
         RestTemplate restTemplate = new RestTemplate();
 
@@ -47,12 +47,13 @@ public class UserServiceImplementation {
                 url,
                 HttpMethod.GET,
                 null,
-                new ParameterizedTypeReference<List<CarDto>>(){});
+                new ParameterizedTypeReference<List<CarDto>>() {
+                });
 
         return response.getBody();
     }
 
-    public User createNewUser(String firstName, String lastName, Long nif){
+    public User createNewUser(String firstName, String lastName, Long nif) {
 
         User newUser = new User();
 
@@ -61,42 +62,33 @@ public class UserServiceImplementation {
         newUser.setNif(nif);
 
         return user_repository.save(newUser);
-
     }
 
-    public void deleteUser (Long user_id){
+    public void deleteUser(Long user_id) {
 
         User userToDelete = user_repository.findUserByUserId(user_id);
 
         user_repository.delete(userToDelete);
     }
 
-    public CarDto rentCar (Long user_id, Long car_id) throws IOException {
-
-        CarDto inputBody = new CarDto();
-
-        inputBody.setId(car_id);
-        inputBody.setUser_id(user_id);
-
-        Gson gson = new Gson();
-        String json = gson.toJson(inputBody).replaceAll("(\\r|\\n)", "");;
-
-        HttpHeaders requestHeaders = new HttpHeaders();
+    public CarDto rentCar(Long user_id, Long car_id) throws IllegalArgumentException {
 
         RestTemplate restTemplateGetCars = new RestTemplate();
-        requestHeaders.add(json, MediaType.APPLICATION_JSON_VALUE);
 
-        HttpEntity<Json> requestEntity = new HttpEntity<>(requestHeaders);
+        HttpEntity<String> requestEntity = requestEntityCreation(user_id, car_id);
 
         ResponseEntity<List<CarDto>> responseGetCars = restTemplateGetCars.exchange(
-                "http://"+host+":"+port+"/carService",
+                "http://" + host + ":" + port + "/carService?id="+car_id,
                 HttpMethod.GET,
-                requestEntity,
-                new ParameterizedTypeReference<List<CarDto>>(){});
+                null,
+                new ParameterizedTypeReference<List<CarDto>>() {
+                });
 
         List<CarDto> listOfCarsById = responseGetCars.getBody();
 
-        if (listOfCarsById.size() == 0){
+        if (listOfCarsById.size() == 0) {
+
+            log.error("Car doesn't exist.");
 
             return null;
 
@@ -104,35 +96,69 @@ public class UserServiceImplementation {
 
             CarDto searchedCar = listOfCarsById.get(0);
 
-            if(searchedCar.getIs_available()){
+            if (searchedCar.getIs_available()) {
 
                 RestTemplate restTemplateRentCar = new RestTemplate();
 
-                String rentCarURL = "http://"+host+":"+port+"/carService/rentcar";
+                String rentCarURL = "http://" + host + ":" + port + "/carService/rentcar";
 
-                return restTemplateRentCar.exchange(rentCarURL,HttpMethod.PUT,requestEntity,CarDto.class).getBody();
+                return restTemplateRentCar.exchange(rentCarURL, HttpMethod.PUT, requestEntity, CarDto.class).getBody();
 
-            } return null;
+            } else {
 
+                log.error("Car not available.");
+                return null;
+            }
         }
 
     }
 
+    public HttpEntity requestEntityCreation(Long user_id, Long car_id){
+        CarDto inputBody = new CarDto();
 
-    public CarDto releaseCar (Long user_id) throws IOException {
+        inputBody.setId(car_id);
+        inputBody.setUser_id(user_id);
 
-        getCarsCurrentlyRentedByUserId(user_id);
+        Gson gson = new Gson();
+        String json = gson.toJson(inputBody);
 
-        System.out.println("\nCars currently rented by user: " + user_id + "\nPlease enter de id of the car you wish to release. ");
+        HttpHeaders requestHeaders = new HttpHeaders();
 
-        Long car_id = Long.valueOf(System.in.read());
+        requestHeaders.add("Content-Type","application/json");
 
-        RestTemplate restTemplateGetReleaseCar = new RestTemplate();
+        HttpEntity<String> requestEntity = new HttpEntity<>(json,requestHeaders);
 
-        String rentCarURL = "http://"+host+":"+port+"/carService/releasecar?id=" + car_id;
-
-        return restTemplateGetReleaseCar.exchange(rentCarURL,HttpMethod.PUT,null,CarDto.class).getBody();
-
+        return requestEntity;
     }
 
+    public CarDto releaseCar(Long user_id, Long car_id) {
+
+        List<CarDto> listOfCars = getCarsCurrentlyRentedByUserId(user_id);
+        int count = 0;
+
+        for (CarDto carDto : listOfCars) {
+
+            if (carDto.user_id == user_id) {
+
+                RestTemplate restTemplateGetReleaseCar = new RestTemplate();
+
+                String rentCarURL = "http://" + host + ":" + port + "/carService/releasecar";
+                count++;
+
+                log.info("Car " + car_id + " released.");
+
+                HttpEntity<String> requestEntity = requestEntityCreation(user_id, car_id);
+
+                RestTemplate restTemplateGetCars = new RestTemplate();
+
+                return restTemplateGetReleaseCar.exchange(rentCarURL, HttpMethod.PUT, requestEntity, CarDto.class).getBody();
+            }
+        }
+
+        if (count == 0) {
+
+            log.info("There was a problem releasing the car.");
+        }
+        return null;
+    }
 }
