@@ -6,11 +6,13 @@ import com.rentacar.user.dto.CarDto;
 import com.rentacar.user.repository.UserRepository;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.openqa.selenium.json.Json;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -64,9 +66,9 @@ public class UserServiceImplementation {
         return user_repository.save(newUser);
     }
 
-    public void deleteUser(Long user_id) {
+    public void deleteUser(Long nif) {
 
-        User userToDelete = user_repository.findUserByUserId(user_id);
+        User userToDelete = user_repository.findUserByNif(nif);
 
         user_repository.delete(userToDelete);
     }
@@ -78,7 +80,7 @@ public class UserServiceImplementation {
         HttpEntity<String> requestEntity = requestEntityCreation(user_id, car_id);
 
         ResponseEntity<List<CarDto>> responseGetCars = restTemplateGetCars.exchange(
-                "http://" + host + ":" + port + "/carService?id="+car_id,
+                "http://" + host + ":" + port + "/carService?id=" + car_id,
                 HttpMethod.GET,
                 null,
                 new ParameterizedTypeReference<List<CarDto>>() {
@@ -113,7 +115,7 @@ public class UserServiceImplementation {
 
     }
 
-    public HttpEntity requestEntityCreation(Long user_id, Long car_id){
+    public HttpEntity requestEntityCreation(Long user_id, Long car_id) {
         CarDto inputBody = new CarDto();
 
         inputBody.setId(car_id);
@@ -124,9 +126,9 @@ public class UserServiceImplementation {
 
         HttpHeaders requestHeaders = new HttpHeaders();
 
-        requestHeaders.add("Content-Type","application/json");
+        requestHeaders.add("Content-Type", "application/json");
 
-        HttpEntity<String> requestEntity = new HttpEntity<>(json,requestHeaders);
+        HttpEntity<String> requestEntity = new HttpEntity<>(json, requestHeaders);
 
         return requestEntity;
     }

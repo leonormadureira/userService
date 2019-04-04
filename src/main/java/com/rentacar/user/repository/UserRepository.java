@@ -10,4 +10,7 @@ public interface UserRepository extends CrudRepository <User, Long> {
 
     @Query(value = "SELECT * FROM User WHERE user_id = ?1", nativeQuery = true)
     User findUserByUserId(Long user_id);
+
+    @Query(value = "SELECT * FROM User WHERE nif = ?1", nativeQuery = true)
+    User findUserByNif(Long nif);
 }

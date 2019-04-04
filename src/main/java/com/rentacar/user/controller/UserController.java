@@ -39,7 +39,7 @@ public class UserController {
     @RequestMapping(method = RequestMethod.DELETE, path = "/userService")
     public ResponseEntity deleteUser(@RequestBody InputBody requestBody) {
 
-        service.deleteUser(requestBody.getUser_id());
+        service.deleteUser(requestBody.getNif());
 
         return ResponseEntity.ok(HttpStatus.OK);
 
